@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'macos/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'macos/**'
+      - '.github/workflows/ci.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-macos:
+    name: macOS (Swift 6 & SwiftUI)
+    runs-on: macos-15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode Version
+        run: |
+          if [ -d "/Applications/Xcode_16.2.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.2.app
+          elif [ -d "/Applications/Xcode_16.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.1.app
+          elif [ -d "/Applications/Xcode_16.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app
+          elif [ -d "/Applications/Xcode_16.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.app
+          fi
+          xcode-select -p
+          swift --version
+
+      - name: Run Swift Test Suite
+        working-directory: macos
+        run: swift test
+
+      - name: Test Release Packaging
+        working-directory: macos
+        run: ./scripts/package_app.sh
+
+      - name: Verify Bundle Integrity & Signature
+        run: |
+          test -d "macos/dist/Synkrophase.app"
+          test -x "macos/dist/Synkrophase.app/Contents/MacOS/SynkroGui"
+          codesign --verify --deep --strict "macos/dist/Synkrophase.app"
+          echo "Application bundle verification passed."

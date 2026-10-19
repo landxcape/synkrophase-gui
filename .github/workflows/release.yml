@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-macos:
+    name: Build & Release macOS Bundle
+    runs-on: macos-15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode Version
+        run: |
+          if [ -d "/Applications/Xcode_16.2.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.2.app
+          elif [ -d "/Applications/Xcode_16.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.1.app
+          elif [ -d "/Applications/Xcode_16.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app
+          elif [ -d "/Applications/Xcode_16.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.app
+          fi
+          xcode-select -p
+          swift --version
+
+      - name: Run Test Suite Gate
+        working-directory: macos
+        run: swift test
+
+      - name: Package Release Application Bundle
+        working-directory: macos
+        run: ./scripts/package_app.sh
+
+      - name: Archive Application Bundle & Generate Checksums
+        run: |
+          cd macos/dist
+          zip -r -y "Synkrophase-macos-arm64.zip" "Synkrophase.app"
+          shasum -a 256 "Synkrophase-macos-arm64.zip" > "Synkrophase-macos-arm64.zip.sha256"
+          echo "SHA-256 Checksum:"
+          cat "Synkrophase-macos-arm64.zip.sha256"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            macos/dist/Synkrophase-macos-arm64.zip
+            macos/dist/Synkrophase-macos-arm64.zip.sha256
+          generate_release_notes: true
+          draft: false
+          prerelease: false
