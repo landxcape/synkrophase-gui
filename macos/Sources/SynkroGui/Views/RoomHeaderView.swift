@@ -32,7 +32,14 @@ public struct RoomHeaderView: View {
                 )
                 .overlay(
                     Capsule()
-                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.18), Color.clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.5
+                        )
                 )
             }
             .buttonStyle(.plain)
@@ -43,8 +50,8 @@ public struct RoomHeaderView: View {
             // Role Badge
             Text(viewModel.role.rawValue.uppercased())
                 .font(.system(size: 9, weight: .bold, design: .rounded))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
                 .background(roleBadgeBackground)
                 .foregroundStyle(roleBadgeForeground)
                 .clipShape(Capsule())
@@ -58,33 +65,49 @@ public struct RoomHeaderView: View {
                     .fontWeight(.semibold)
                     .monospacedDigit()
             }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Color.primary.opacity(0.05))
             .foregroundStyle(.secondary)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(
-                Capsule()
-                    .fill(Color.primary.opacity(0.05))
-            )
+            .clipShape(Capsule())
         }
     }
 
-    private var roleBadgeBackground: Color {
+    private var roleBadgeBackground: some View {
         switch viewModel.role {
         case .leader:
-            return Color.blue.opacity(0.15)
+            return AnyView(
+                LinearGradient(
+                    colors: [Color.green.opacity(0.18), Color.green.opacity(0.08)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
         case .moderator:
-            return Color.purple.opacity(0.15)
+            return AnyView(
+                LinearGradient(
+                    colors: [Color.blue.opacity(0.18), Color.blue.opacity(0.08)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
         case .listener:
-            return Color.secondary.opacity(0.15)
+            return AnyView(
+                LinearGradient(
+                    colors: [Color.primary.opacity(0.08), Color.primary.opacity(0.04)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
         }
     }
 
     private var roleBadgeForeground: Color {
         switch viewModel.role {
         case .leader:
-            return .blue
+            return .green
         case .moderator:
-            return .purple
+            return .blue
         case .listener:
             return .secondary
         }

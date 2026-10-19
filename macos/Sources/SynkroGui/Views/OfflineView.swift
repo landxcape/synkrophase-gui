@@ -67,7 +67,7 @@ public struct OfflineView: View {
                     }
                     .font(.subheadline)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
+                    .padding(.vertical, 8)
                     .background(Color.accentColor)
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -89,7 +89,7 @@ public struct OfflineView: View {
                         }
                         .font(.subheadline)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 7)
+                        .padding(.vertical, 8)
                         .background(Color.primary.opacity(0.06))
                         .foregroundStyle(.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -99,9 +99,15 @@ public struct OfflineView: View {
                 } else {
                     HStack(spacing: 8) {
                         TextField("ROOM CODE", text: $joinRoomCode)
-                            .font(.system(.body, design: .monospaced))
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.plain)
+                            .font(.system(.subheadline, design: .monospaced))
                             .multilineTextAlignment(.center)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color.primary.opacity(0.05))
+                            )
                             .onChange(of: joinRoomCode) { _, newValue in
                                 joinRoomCode = newValue.uppercased()
                             }
@@ -122,7 +128,7 @@ public struct OfflineView: View {
                                 }
                             }
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 5)
+                            .padding(.vertical, 6)
                             .background(Color.accentColor)
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -140,8 +146,8 @@ public struct OfflineView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    .padding(8)
-                    .background(Color.primary.opacity(0.04))
+                    .padding(6)
+                    .background(Color.primary.opacity(0.03))
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
             }
@@ -151,7 +157,22 @@ public struct OfflineView: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.primary.opacity(0.03))
+                .fill(.thinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.20), location: 0.0),
+                            .init(color: .clear, location: 0.5),
+                            .init(color: .black.opacity(0.06), location: 1.0)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.5
+                )
         )
     }
 }

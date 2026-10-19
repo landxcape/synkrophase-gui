@@ -9,20 +9,26 @@ public struct TrackCardView: View {
 
     public var body: some View {
         HStack(spacing: 12) {
-            // Player / Artwork Icon
+            // Liquid Glass Artwork Container
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.primary.opacity(0.08))
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.accentColor.opacity(0.18),
+                                Color.accentColor.opacity(0.04)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
 
                 Image(systemName: "music.note")
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundStyle(.tint)
             }
-            .frame(width: 44, height: 44)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
-            )
+            .frame(width: 46, height: 46)
+            .shadow(color: Color.accentColor.opacity(0.12), radius: 6, x: 0, y: 3)
 
             // Metadata Titles
             VStack(alignment: .leading, spacing: 2) {
@@ -58,12 +64,23 @@ public struct TrackCardView: View {
         }
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.primary.opacity(0.03))
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(.thinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.20), location: 0.0),
+                            .init(color: .clear, location: 0.5),
+                            .init(color: .black.opacity(0.06), location: 1.0)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.5
+                )
         )
     }
 
