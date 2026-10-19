@@ -3,6 +3,14 @@
 All notable changes to Synkrophase GUI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-10-19
+
+### Added
+- **Native Application Icon (`AppIcon.icns`)**:
+  - Implemented authentic, minimal Apple Pro audio design language icon (Dual-Track Synchronized Waveform).
+  - Deep midnight-indigo squircle with 185pt Apple continuous corner radius, subtle inset acoustic plate, and dual synchronized audio waveform peaks converging into a pure white master clock pulse.
+  - Multi-resolution Retina icon assets generated from 16×16 up to 1024×1024.
+
 ## [0.1.0] - 2026-10-19
 
 ### Added
