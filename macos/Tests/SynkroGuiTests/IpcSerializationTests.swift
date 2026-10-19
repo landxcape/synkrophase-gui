@@ -117,4 +117,41 @@ final class IpcSerializationTests: XCTestCase {
         let joinMode = SynkroViewModel.DaemonLaunchMode.join(roomCode: "ROOM12")
         XCTAssertEqual(joinMode.arguments, ["daemon", "start", "join", "ROOM12"])
     }
+
+    func testDecodeIpcResponseStatus() throws {
+        let json = """
+        {
+            "id": 10,
+            "result": {
+                "room_code": "ROOM34C2",
+                "role": "Leader",
+                "self_id": "34c2dfe5-462d-4914-92a7-b05af8c74ced",
+                "device_name": "shakyapurna",
+                "leader_id": "34c2dfe5-462d-4914-92a7-b05af8c74ced",
+                "leader_addr": null,
+                "is_playing": true,
+                "position_sec": 122.486,
+                "track_title": "The Kill (Bury Me)",
+                "track_artist": "Thirty Seconds to Mars",
+                "track_album": "A Beautiful Lie",
+                "duration_sec": 233.391006,
+                "clock_offset_us": 0,
+                "drift_offset_us": 0,
+                "drift_status": "Locked (<80ms)",
+                "peers": []
+            }
+        }
+        """.data(using: .utf8)!
+
+        let response = try JSONDecoder().decode(IpcResponse.self, from: json)
+        guard let result = response.result else {
+            XCTFail("result is nil")
+            return
+        }
+        let encoded = try JSONEncoder().encode(result)
+        let snapshot = try JSONDecoder().decode(DaemonStatusSnapshot.self, from: encoded)
+        XCTAssertEqual(snapshot.roomCode, "ROOM34C2")
+        XCTAssertEqual(snapshot.role, .leader)
+        XCTAssertTrue(snapshot.isPlaying)
+    }
 }

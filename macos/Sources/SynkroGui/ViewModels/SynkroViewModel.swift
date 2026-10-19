@@ -55,21 +55,19 @@ public final class SynkroViewModel {
     }
 
     private func setupClient() {
-        Task { [weak self] in
-            await self?.ipcClient.setCallbacks(
-                onEvent: { [weak self] event in
-                    Task { @MainActor [weak self] in
-                        self?.handleEvent(event)
-                    }
-                },
-                onStateChange: { [weak self] state in
-                    Task { @MainActor [weak self] in
-                        self?.handleStateChange(state)
-                    }
+        ipcClient.setCallbacks(
+            onEvent: { [weak self] event in
+                Task { @MainActor [weak self] in
+                    self?.handleEvent(event)
                 }
-            )
-            await self?.ipcClient.start()
-        }
+            },
+            onStateChange: { [weak self] state in
+                Task { @MainActor [weak self] in
+                    self?.handleStateChange(state)
+                }
+            }
+        )
+        ipcClient.start()
     }
 
     private func handleStateChange(_ state: ConnectionState) {
@@ -109,9 +107,15 @@ public final class SynkroViewModel {
             }
 
         case "peer_update":
-            if let data = try? JSONEncoder().encode(event.data),
-               let peerList = try? decoder.decode([PeerInfo].self, from: data) {
-                self.peers = peerList
+            if let data = try? JSONEncoder().encode(event.data) {
+                if let peerList = try? decoder.decode([PeerInfo].self, from: data) {
+                    self.peers = peerList
+                } else if let wrapper = try? decoder.decode(PeerUpdateWrapper.self, from: data) {
+                    self.peers = wrapper.peers
+                    if let newRole = wrapper.role {
+                        self.role = newRole
+                    }
+                }
             }
 
         case "drift_update":
@@ -129,9 +133,9 @@ public final class SynkroViewModel {
     public func fetchStatus() async {
         do {
             let response = try await ipcClient.sendRequest(method: "status")
-            if let result = response.result,
-               let data = try? JSONEncoder().encode(result),
-               let snapshot = try? JSONDecoder().decode(DaemonStatusSnapshot.self, from: data) {
+            if let result = response.result {
+                let data = try JSONEncoder().encode(result)
+                let snapshot = try JSONDecoder().decode(DaemonStatusSnapshot.self, from: data)
                 self.roomCode = snapshot.roomCode
                 self.role = snapshot.role
                 self.isPlaying = snapshot.isPlaying
@@ -145,7 +149,7 @@ public final class SynkroViewModel {
                 self.peers = snapshot.peers
             }
         } catch {
-            // Socket error or disconnected
+            // Failed to fetch status
         }
     }
 

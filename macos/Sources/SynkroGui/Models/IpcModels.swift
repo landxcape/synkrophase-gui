@@ -146,7 +146,27 @@ public struct PeerInfo: Codable, Equatable, Identifiable, Sendable {
         case name
         case role
         case clockOffsetUs = "clock_offset_us"
+        case lastSeen = "last_seen"
         case lastSeenEpochMs = "last_seen_epoch_ms"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.deviceId = try container.decode(String.self, forKey: .deviceId)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.role = try container.decode(Role.self, forKey: .role)
+        self.clockOffsetUs = try container.decode(Int64.self, forKey: .clockOffsetUs)
+        self.lastSeenEpochMs = (try? container.decodeIfPresent(UInt64.self, forKey: .lastSeen))
+            ?? (try? container.decodeIfPresent(UInt64.self, forKey: .lastSeenEpochMs))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(deviceId, forKey: .deviceId)
+        try container.encode(name, forKey: .name)
+        try container.encode(role, forKey: .role)
+        try container.encode(clockOffsetUs, forKey: .clockOffsetUs)
+        try container.encodeIfPresent(lastSeenEpochMs, forKey: .lastSeen)
     }
 
     public init(deviceId: String, name: String, role: Role, clockOffsetUs: Int64, lastSeenEpochMs: UInt64? = nil) {
@@ -155,6 +175,18 @@ public struct PeerInfo: Codable, Equatable, Identifiable, Sendable {
         self.role = role
         self.clockOffsetUs = clockOffsetUs
         self.lastSeenEpochMs = lastSeenEpochMs
+    }
+}
+
+public struct PeerUpdateWrapper: Codable, Sendable {
+    public let peers: [PeerInfo]
+    public let role: Role?
+    public let isLeader: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case peers
+        case role
+        case isLeader = "is_leader"
     }
 }
 
