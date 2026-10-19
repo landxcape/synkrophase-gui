@@ -36,7 +36,7 @@ public struct PopoverView: View {
                 .opacity(0.3)
 
             // Footer Utility Bar
-            HStack {
+            HStack(spacing: 10) {
                 Button(action: {
                     Task {
                         await viewModel.fetchStatus()
@@ -48,6 +48,21 @@ public struct PopoverView: View {
                 }
                 .buttonStyle(.plain)
                 .help("Refresh Status")
+
+                if viewModel.connectionState == .connected {
+                    Button(action: {
+                        viewModel.stopDaemon()
+                    }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "power")
+                            Text("Stop")
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Stop background sync daemon")
+                }
 
                 Spacer()
 

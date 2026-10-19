@@ -22,9 +22,31 @@ public final class SynkroViewModel {
     public var isScrubbing: Bool = false
     public var copiedRoomCode: Bool = false
     public var isStartingDaemon: Bool = false
+    public var launchErrorMessage: String? = nil
+
+    public enum DaemonLaunchMode: Sendable, Equatable {
+        case host(roomCode: String? = nil)
+        case join(roomCode: String)
+
+        public var arguments: [String] {
+            var args = ["daemon", "start"]
+            switch self {
+            case .host(let roomCode):
+                args.append("host")
+                if let code = roomCode, !code.trimmingCharacters(in: .whitespaces).isEmpty {
+                    args.append(code.trimmingCharacters(in: .whitespaces))
+                }
+            case .join(let roomCode):
+                args.append("join")
+                args.append(roomCode.trimmingCharacters(in: .whitespaces))
+            }
+            return args
+        }
+    }
 
     private let ipcClient: DaemonIpcClient
     private var timelineTimer: Timer?
+    private var launchWatchdogTask: Task<Void, Never>?
 
     public init(ipcClient: DaemonIpcClient = DaemonIpcClient()) {
         self.ipcClient = ipcClient
@@ -54,6 +76,9 @@ public final class SynkroViewModel {
         self.connectionState = state
         if state == .connected {
             self.isStartingDaemon = false
+            self.launchErrorMessage = nil
+            self.launchWatchdogTask?.cancel()
+            self.launchWatchdogTask = nil
             Task {
                 await fetchStatus()
             }
@@ -197,18 +222,55 @@ public final class SynkroViewModel {
         }
     }
 
-    public func launchDaemon() {
-        isStartingDaemon = true
+    public func launchDaemon(mode: DaemonLaunchMode = .host(roomCode: nil)) {
+        self.isStartingDaemon = true
+        self.launchErrorMessage = nil
         let synkroBin = findSynkroBinary()
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: synkroBin)
-        process.arguments = ["daemon", "start"]
+        process.arguments = mode.arguments
+
+        process.terminationHandler = { [weak self] proc in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                if proc.terminationStatus != 0 {
+                    self.isStartingDaemon = false
+                    self.launchErrorMessage = "Daemon exited with status \(proc.terminationStatus)"
+                    self.launchWatchdogTask?.cancel()
+                    self.launchWatchdogTask = nil
+                }
+            }
+        }
 
         do {
             try process.run()
         } catch {
-            isStartingDaemon = false
+            self.isStartingDaemon = false
+            self.launchErrorMessage = "Failed to launch daemon: \(error.localizedDescription)"
+            return
+        }
+
+        // Start 4.0s watchdog to prevent "stuck on starting"
+        launchWatchdogTask?.cancel()
+        launchWatchdogTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard let self = self, !Task.isCancelled else { return }
+            if self.isStartingDaemon && self.connectionState != .connected {
+                self.isStartingDaemon = false
+                self.launchErrorMessage = "Launch timed out. Run 'synkro doctor' to diagnose."
+            }
+        }
+    }
+
+    public func stopDaemon() {
+        Task {
+            _ = try? await ipcClient.sendRequest(method: "stop")
+            let synkroBin = findSynkroBinary()
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: synkroBin)
+            process.arguments = ["daemon", "stop"]
+            try? process.run()
         }
     }
 

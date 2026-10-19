@@ -53,14 +53,11 @@ public actor DaemonIpcClient {
     }
 
     private func connectionLoop() async {
-        var backoffMs: UInt64 = 500
-
         while isRunning {
             if FileManager.default.fileExists(atPath: socketPath) {
                 notifyState(.connecting)
                 if connectSocket() {
                     notifyState(.connected)
-                    backoffMs = 500 // Reset backoff on successful connection
 
                     // Send initial subscription handshake
                     _ = try? await sendRequest(method: "subscribe")
@@ -74,8 +71,7 @@ public actor DaemonIpcClient {
             }
 
             guard isRunning else { break }
-            try? await Task.sleep(nanoseconds: backoffMs * 1_000_000)
-            backoffMs = min(backoffMs * 2, 5000) // Cap backoff at 5 seconds
+            try? await Task.sleep(nanoseconds: 500 * 1_000_000)
         }
     }
 

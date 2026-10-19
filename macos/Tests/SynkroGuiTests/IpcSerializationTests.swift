@@ -106,4 +106,15 @@ final class IpcSerializationTests: XCTestCase {
         XCTAssertTrue(jsonString.contains("\"method\":\"seek\""))
         XCTAssertTrue(jsonString.contains("30.5"))
     }
+
+    func testDaemonLaunchModeArguments() {
+        let hostDefault = SynkroViewModel.DaemonLaunchMode.host(roomCode: nil)
+        XCTAssertEqual(hostDefault.arguments, ["daemon", "start", "host"])
+
+        let hostWithCode = SynkroViewModel.DaemonLaunchMode.host(roomCode: "DEMO9")
+        XCTAssertEqual(hostWithCode.arguments, ["daemon", "start", "host", "DEMO9"])
+
+        let joinMode = SynkroViewModel.DaemonLaunchMode.join(roomCode: "ROOM12")
+        XCTAssertEqual(joinMode.arguments, ["daemon", "start", "join", "ROOM12"])
+    }
 }
