@@ -41,8 +41,14 @@ final class UpdateCheckerTests: XCTestCase {
 
     @MainActor
     func testUpdateCheckerInitialization() {
-        let checker = UpdateChecker(currentVersion: "0.1.1")
-        XCTAssertEqual(checker.currentVersion, "0.1.1")
-        XCTAssertEqual(checker.status, .idle)
+        let customChecker = UpdateChecker(currentVersion: "0.1.0")
+        XCTAssertEqual(customChecker.currentVersion, "0.1.0")
+        XCTAssertEqual(customChecker.status, .idle)
+
+        // Empty bundle to verify fallback version default
+        let emptyBundle = Bundle(path: "/nonexistent") ?? Bundle()
+        let fallbackChecker = UpdateChecker(bundle: emptyBundle)
+        XCTAssertEqual(fallbackChecker.currentVersion, "0.1.2")
+        XCTAssertEqual(fallbackChecker.status, .idle)
     }
 }

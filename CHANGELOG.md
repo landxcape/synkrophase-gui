@@ -3,6 +3,17 @@
 All notable changes to Synkrophase GUI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-10-19
+
+### Added
+- **In-App About Section & GitHub Update Checker (`AboutView.swift`, `UpdateChecker.swift`)**:
+  - Implemented `@Observable` update checker querying GitHub Releases API with automated semver comparison.
+  - Added dedicated About view displaying app icon, dynamic bundle version, core daemon engine info (`synkro v0.8.2`), license, and project links.
+  - Interactive update flow: detects newer releases, provides 1-click **"Copy brew upgrade"** button (`brew upgrade --cask synkrophase`), and direct link to GitHub release.
+  - Integrated `[ⓘ]` About button in the Menu Bar popover utility footer with animated in-place crossfade and dynamic height recalculation.
+- **Release CI Quality Gate**:
+  - Added mandatory `test-gate` job in `.github/workflows/release.yml` executing `swift test` on macOS runners before building or publishing release assets.
+
 ## [0.1.1] - 2026-10-19
 
 ### Added

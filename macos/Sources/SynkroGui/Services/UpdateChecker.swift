@@ -36,12 +36,12 @@ public final class UpdateChecker {
     public var status: UpdateStatus = .idle
     public let currentVersion: String
 
-    public init(currentVersion: String? = nil) {
+    public init(currentVersion: String? = nil, bundle: Bundle = .main) {
         if let current = currentVersion {
             self.currentVersion = current
         } else {
-            let bundleVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
-            self.currentVersion = bundleVersion ?? "0.1.1"
+            let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] as? String
+            self.currentVersion = bundleVersion ?? "0.1.2"
         }
     }
 
