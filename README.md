@@ -1,87 +1,200 @@
 # Synkrophase GUI
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
+[![macOS: 14.0+](https://img.shields.io/badge/macOS-14.0%20%7C%2027-black?logo=apple)](macos/)
+[![Swift: 6.4](https://img.shields.io/badge/Swift-6.4-F05138?logo=swift&logoColor=white)](macos/)
+[![Release](https://img.shields.io/github/v/release/landxcape/synkrophase-gui)](https://github.com/landxcape/synkrophase-gui/releases)
 
-Native graphical frontend clients for [Synkrophase](https://github.com/landxcape/synkrophase) — a high-precision, low-latency playback controller synchronizer for local networks.
+**Synkrophase GUI** provides native, platform-integrated graphical frontend clients for [**Synkrophase**](https://github.com/landxcape/synkrophase) — the high-precision, low-latency playback controller synchronizer for local networks.
+
+Rather than streaming heavy audio over the network, Synkrophase coordinates each machine's native desktop player (Spotify, Apple Music) with microsecond monotonic clock alignment. This repository hosts the official native frontend applications that interact with the headless `synkro` background daemon via local IPC.
 
 ---
 
-## Architecture Overview
+## Visual Interface (macOS Menu Bar)
 
-Synkrophase GUI applications are lightweight presentation clients that interface directly with the background `synkro` daemon over a local IPC stream. Rather than bundling internal synchronization engines, each GUI client connects via Unix Domain Socket (`~/.synkro/synkro.sock`) or platform-native IPC to command the daemon and consume real-time playback state updates.
-
-Detailed protocol specifications, frame definitions, and state machine transitions are documented in [CLIENT_ARCHITECTURE.md](doc/CLIENT_ARCHITECTURE.md).
+The macOS client lives natively in the status bar as a Menu Bar Extra popover built with Swift 6 and SwiftUI:
 
 ```text
-┌──────────────────────────────────────────────┐
-│  Native GUI Client (macOS / Linux / Windows) │
-└──────────────────────┬───────────────────────┘
-                       │ JSON-RPC IPC Stream
-                       ▼
-┌──────────────────────────────────────────────┐
-│  Background Engine (synkro daemon)           │
-│  • PTP-lite Clock Sync (UDP)                 │
-│  • Player Adapters (Spotify / Apple Music)   │
-│  • Actuation Latency Profiling               │
-└──────────────────────────────────────────────┘
+       ┌──────────┐
+───────┤    ∿∿    ├───────────────────────────────────────────────── (Menu Bar)
+       └────┬─────┘
+            ▼
+┌────────────────────────────────────────────────────────┐
+│  ROOM: TESTROOM               • LAN Connected          │
+│  Role: [LEADER]               • Offset: +12µs (<80ms)  │
+├────────────────────────────────────────────────────────┤
+│  ┌──────────┐  Numb                                    │
+│  │  ALBUM   │  Linkin Park — Meteora                   │
+│  │   ART    │  [Spotify]                               │
+│  └──────────┘                                          │
+│                                                        │
+│  01:05 ━━━━━━━━━━━━━━━━━━●───────────────────── 03:07   │
+│                                                        │
+│     [⏮]             [⏸] / [▶]             [⏭]         │
+│     Prev           Play / Pause           Next         │
+│                                                        │
+│  Volume: ━━━━━━━━━━━━━━━━━━━━━━●─────── (82%)          │
+├────────────────────────────────────────────────────────┤
+│  ▼ Connected Peers (2)                                 │
+│    • Host (You)                [LEADER]       Ref Clock │
+│    • Follower-Mac              [MODERATOR]        +12µs │
+├────────────────────────────────────────────────────────┤
+│  [↻ Refresh]    [⏻ Stop Daemon]            [Quit App]  │
+└────────────────────────────────────────────────────────┘
+```
+
+When disconnected, the popover transitions seamlessly into an offline quick-launch hub:
+
+```text
+┌────────────────────────────────────────────────────────┐
+│  ∿/  Synkrophase is Offline                            │
+│      No active room session running                    │
+├────────────────────────────────────────────────────────┤
+│  Host a Room                                           │
+│  Start a new local network session as room leader      │
+│  [ Host New Room ]                                     │
+├────────────────────────────────────────────────────────┤
+│  Join a Room                                           │
+│  Enter an existing 4-letter room code                  │
+│  [ Room Code: ABCD ]   [ Join Room ]                   │
+├────────────────────────────────────────────────────────┤
+│  [↻ Refresh]                               [Quit App]  │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Platform Clients
+## Core Features & Design Highlights
 
-| Platform | Frontend Stack | Interface Form Factor | Status |
-| :--- | :--- | :--- | :--- |
-| **macOS** | Swift 6.4 / SwiftUI | Native Menu Bar Extra Popover | **Available** (`macos/`) |
-| **Linux** | GTK4 / Libadwaita / Rust | System Tray Indicator & Window | *Planned* (`linux/`) |
-| **Windows** | WinUI 3 / XAML / C# | System Notification Area Flyout | *Planned* (`windows/`) |
+- **Native Behind-Window Liquid Glass Transparency**:
+  - Leverages AppKit's `NSVisualEffectView` with `.behindWindow` blending mode and `.popover` material.
+  - Dynamically clears window backing opacity (`window.isOpaque = false`, `window.backgroundColor = .clear`) to create authentic optical refraction blurring your desktop wallpaper with zero artificial borders or heavy gray panels.
+- **Dynamic Content Height Expansion**:
+  - Eliminates static window frame clipping. As room disclosure drawers (such as the Connected Peers list) expand or collapse, the popover measures internal SwiftUI content height and smoothly animates the AppKit window frame downwards from the menu bar anchor.
+- **Uncropped 1:1 Status Bar Indicator**:
+  - Clean SF Symbol integration featuring `waveform.slash` when offline/disconnected and real-time variable-color animated `waveform` during active playback, perfectly proportioned to the 22pt macOS status bar bounds.
+- **Non-Blocking Streaming IPC Engine**:
+  - Replaces traditional blocking POSIX reads with Apple's `DispatchSourceRead` event dispatch on a dedicated serial queue.
+  - Ingests real-time JSON-RPC daemon state snapshots and timeline broadcasts without blocking the main rendering thread.
+- **Zero-Touch Daemon Management**:
+  - Directly launches and supervises the background `synkro` daemon if it is not already running when you click Host or Join.
+- **Granular 3-Tier Role Badges**:
+  - Real-time visual distinction between `[LEADER]` (room authority and clock reference), `[MODERATOR]` (playback queue control), and `[LISTENER]` (synchronized follower).
 
 ---
 
-## macOS Menu Bar App (`macos/`)
+## Multi-Platform Roadmap
 
-The macOS frontend is a native Menu Bar Extra application designed specifically for macOS with:
-- **Behind-Window Liquid Glass Transparency**: Native `NSVisualEffectView` materials rendering optical depth and vibrancy against the user's desktop wallpaper.
-- **Dynamic Window Resizing**: Smooth animated frame expansion when toggling room member disclosure drawers.
-- **Microsecond Clock & Playback Scrubbing**: Real-time progress bar, timeline scrubber, track artwork/metadata, and transport controls.
-- **Role Hierarchy Indicators**: Granular peer badges for `[LEADER]`, `[MODERATOR]`, and `[LISTENER]`.
-- **Zero-Touch Background Daemon Management**: Automatically triggers background daemon hosting or room joining directly from the menu bar when offline.
+| Platform | Interface | Technology Stack | Status | Directory |
+| :--- | :--- | :--- | :---: | :--- |
+| **macOS** | Menu Bar Extra Popover | Swift 6.4 / SwiftUI / AppKit | **Available** | [`macos/`](macos/) |
+| **Linux** | AppIndicator & Floating Window | GTK4 / Libadwaita / Rust | *Planned* | `linux/` |
+| **Windows** | System Notification Area Flyout | WinUI 3 / XAML / C# | *Planned* | `windows/` |
+
+---
+
+## Getting Started (macOS)
 
 ### Prerequisites
 
-- macOS 14.0 (Sonoma) or newer (optimized for modern macOS 27 SDK)
-- Swift 6.0+ toolchain (Xcode 16+)
-- Installed `synkro` daemon binary (available via `cargo install --path ../synkrophase` or Homebrew)
-
-### Building and Packaging
-
-1. **Build Debug Binary**:
+1. macOS 14.0 (Sonoma) or newer (tested on macOS 14, 15, and modern macOS 27 SDK).
+2. The core **`synkro`** command-line daemon installed and available in your `PATH` or Homebrew Cellar:
    ```bash
-   cd macos
-   swift build
+   brew tap landxcape/tap
+   brew install landxcape/tap/synkrophase
+   # Or install from source:
+   cargo install --path ../synkrophase
    ```
 
-2. **Run Test Suite**:
-   ```bash
-   swift test
-   ```
+### Option A: Install Pre-Built Application
 
-3. **Package Native Application Bundle (`Synkrophase.app`)**:
-   ```bash
-   ./scripts/package_app.sh
-   ```
-   The self-contained, ad-hoc codesigned application bundle will be created at `macos/dist/Synkrophase.app`.
+1. Download the latest `Synkrophase-macos-arm64.zip` from [GitHub Releases](https://github.com/landxcape/synkrophase-gui/releases/latest).
+2. Unzip and drag `Synkrophase.app` to your `/Applications` directory.
+3. Launch `Synkrophase.app`. The waveform icon will appear in your top Menu Bar.
 
-4. **Launch Application**:
-   ```bash
-   open dist/Synkrophase.app
-   ```
+### Option B: Build from Source
+
+Requires the Swift 6 toolchain (Xcode 16+ or Command Line Tools):
+
+```bash
+# 1. Clone the GUI repository
+git clone https://github.com/landxcape/synkrophase-gui.git
+cd synkrophase-gui/macos
+
+# 2. Run unit and serialization tests
+swift test
+
+# 3. Package the native release application bundle
+./scripts/package_app.sh
+
+# 4. Launch the application
+open dist/Synkrophase.app
+```
+
+The packaging script will compile the release binary, generate the `Info.plist` bundle metadata (`LSUIElement = true` for background menu bar activation policy), and apply an ad-hoc code signature to `macos/dist/Synkrophase.app`.
+
+---
+
+## IPC Architecture & Protocol Integration
+
+Synkrophase GUI operates purely as an IPC client. All PTP-lite UDP network packets, clock synchronizations, and player actuation latency profiles are managed by the core Rust daemon.
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                       Synkrophase GUI                       │
+│  ┌──────────────────────┐        ┌───────────────────────┐  │
+│  │ SwiftUI Popover View │ ◄────► │ SynkroViewModel       │  │
+│  └──────────────────────┘        └───────────┬───────────┘  │
+│                                              │              │
+│                                  ┌───────────▼───────────┐  │
+│                                  │ DaemonIpcClient       │  │
+│                                  │ (DispatchSourceRead)  │  │
+│                                  └───────────┬───────────┘  │
+└──────────────────────────────────────────────┼──────────────┘
+                                               │ Unix Domain Socket
+                                               │ ~/.synkro/synkro.sock
+                                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    synkro daemon (Core)                     │
+│  • PTP-lite Network Clock Engine (<80ms sync deadband)      │
+│  • Single-Flight Player State Evaluator (Spotify / Music)   │
+│  • Actuation Latency Profiler & Ahead-of-Time Pre-Dispatch  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### IPC Command & Event Contract
+
+- **Socket Location**: `~/.synkro/synkro.sock` (macOS/Linux) or `\\.\pipe\synkro.sock` (Windows).
+- **Format**: Length-prefixed JSON frames (`u32` Big-Endian length header + JSON payload).
+- **Commands**:
+  - `GetStatus`: Retrieves complete snapshot (room code, role, player state, drift metrics, peer table).
+  - `Play` / `Pause` / `Toggle`: Controls playback transport.
+  - `Seek(position_ms)`: Absolute timeline navigation.
+  - `Next` / `Previous`: Track progression.
+  - `SetVolume(level)`: Volume alignment.
+- **Push Events**: The daemon continuously streams push notifications whenever peers join/leave, track metadata shifts, or roles change without requiring polling.
+
+For the exhaustive specification and schema models, consult [**CLIENT_ARCHITECTURE.md**](doc/CLIENT_ARCHITECTURE.md).
+
+---
+
+## Permissions & Privacy
+
+- **Automation / Apple Events (macOS)**:
+  - Controlling playback in Spotify or Apple Music requires granting Automation permissions when prompted by macOS.
+  - If a player does not respond, open **System Settings → Privacy & Security → Automation** and verify `Synkrophase.app` has permissions to control **Spotify** and **Music**.
+- **100% Local & Private**:
+  - Synkrophase communicates strictly over your local Wi-Fi / Ethernet LAN via UDP.
+  - Zero cloud dependencies, zero external tracking, zero analytics, and zero external telemetry.
 
 ---
 
 ## Contributing
 
-Contributions for additional native platform implementations (such as Linux GTK4 and Windows WinUI) are welcome. Please ensure new frontend clients adhere strictly to the IPC state machine and wire models documented in [CLIENT_ARCHITECTURE.md](doc/CLIENT_ARCHITECTURE.md).
+We welcome contributions!
+- If you'd like to implement the **Linux (GTK4 / Libadwaita)** or **Windows (WinUI 3)** native client, please read [CLIENT_ARCHITECTURE.md](doc/CLIENT_ARCHITECTURE.md) for wire specifications and open an issue or pull request.
+- When working on the macOS client, ensure all tests pass (`swift test`) and verify packaging (`./scripts/package_app.sh`) before submitting.
 
 ---
 
@@ -89,7 +202,7 @@ Contributions for additional native platform implementations (such as Linux GTK4
 
 Synkrophase GUI is dual-licensed under either:
 
-* [Apache License, Version 2.0](LICENSE-APACHE)
-* [MIT License](LICENSE-MIT)
+* **[Apache License, Version 2.0](LICENSE-APACHE)**
+* **[MIT License](LICENSE-MIT)**
 
 at your option.
