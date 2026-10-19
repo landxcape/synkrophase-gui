@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  release-macos:
-    name: Build & Release macOS Bundle
+  test-gate:
+    name: Test & Packaging Gate
     runs-on: macos-15
     steps:
       - name: Checkout Repository
@@ -30,9 +30,42 @@ jobs:
           xcode-select -p
           swift --version
 
-      - name: Run Test Suite Gate
+      - name: Run Swift Test Suite
         working-directory: macos
         run: swift test
+
+      - name: Test Release Packaging
+        working-directory: macos
+        run: ./scripts/package_app.sh
+
+      - name: Verify Bundle Integrity & Signature
+        run: |
+          test -d "macos/dist/Synkrophase.app"
+          test -x "macos/dist/Synkrophase.app/Contents/MacOS/SynkroGui"
+          test -f "macos/dist/Synkrophase.app/Contents/Resources/AppIcon.icns"
+          codesign --verify --deep --strict "macos/dist/Synkrophase.app"
+          echo "Release verification gate passed successfully."
+
+  publish-release:
+    name: Build & Publish Release Artifacts
+    needs: test-gate
+    runs-on: macos-15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode Version
+        run: |
+          if [ -d "/Applications/Xcode_16.2.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.2.app
+          elif [ -d "/Applications/Xcode_16.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.1.app
+          elif [ -d "/Applications/Xcode_16.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app
+          elif [ -d "/Applications/Xcode_16.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.app
+          fi
+          xcode-select -p
 
       - name: Package Release Application Bundle
         working-directory: macos

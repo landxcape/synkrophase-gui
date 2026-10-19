@@ -96,24 +96,31 @@ When disconnected, the popover transitions seamlessly into an offline quick-laun
 
 ## Getting Started (macOS)
 
-### Prerequisites
+### Option A: Homebrew Cask (Recommended)
 
-1. macOS 14.0 (Sonoma) or newer (tested on macOS 14, 15, and modern macOS 27 SDK).
-2. The core **`synkro`** command-line daemon installed and available in your `PATH` or Homebrew Cellar:
-   ```bash
-   brew tap landxcape/tap
-   brew install landxcape/tap/synkrophase
-   # Or install from source:
-   cargo install --path ../synkrophase
-   ```
+Homebrew Cask installs **both** the native Menu Bar application (`Synkrophase.app` in `/Applications`) and automatically pulls in the underlying `synkro` background daemon (`/opt/homebrew/bin/synkro`) as a required dependency:
 
-### Option A: Install Pre-Built Application
+```bash
+# 1. Tap the repository
+brew tap landxcape/tap
+
+# 2. Install Native Menu Bar App AND CLI Daemon:
+brew install --cask landxcape/tap/synkrophase
+```
+
+> **Terminal-Only Users**: If you only want the command-line interface, interactive TUI, and headless background engine without the GUI app, install the formula alone:
+> ```bash
+> brew install landxcape/tap/synkrophase
+> ```
+
+### Option B: Download Pre-Built Application Bundle
 
 1. Download the latest `Synkrophase-macos-arm64.zip` from [GitHub Releases](https://github.com/landxcape/synkrophase-gui/releases/latest).
-2. Unzip and drag `Synkrophase.app` to your `/Applications` directory.
-3. Launch `Synkrophase.app`. The waveform icon will appear in your top Menu Bar.
+2. Unzip and move `Synkrophase.app` to your `/Applications` directory.
+3. Ensure the core `synkro` daemon is installed (`brew install landxcape/tap/synkrophase` or built from source via [`landxcape/synkrophase`](https://github.com/landxcape/synkrophase)).
+4. Launch `Synkrophase.app`. The waveform icon will appear in your top Menu Bar.
 
-### Option B: Build from Source
+### Option C: Build from Source
 
 Requires the Swift 6 toolchain (Xcode 16+ or Command Line Tools):
 
