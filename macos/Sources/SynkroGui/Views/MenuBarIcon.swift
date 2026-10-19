@@ -10,7 +10,7 @@ public struct MenuBarIcon: View {
     public var body: some View {
         Group {
             if viewModel.connectionState != .connected {
-                Image(systemName: "waveform.badge.exclamationmark")
+                Image(systemName: "waveform.slash")
             } else if viewModel.isPlaying {
                 Image(systemName: "waveform")
                     .symbolEffect(.variableColor.iterative, options: .repeating)

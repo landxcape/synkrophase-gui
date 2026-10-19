@@ -1,7 +1,15 @@
 import SwiftUI
 
+private struct ContentHeightPreferenceKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 public struct PopoverView: View {
     public let viewModel: SynkroViewModel
+    @State private var measuredHeight: CGFloat = 0
 
     public init(viewModel: SynkroViewModel) {
         self.viewModel = viewModel
@@ -76,6 +84,21 @@ public struct PopoverView: View {
         }
         .padding(14)
         .frame(width: 320)
-        .background(.ultraThinMaterial)
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .preference(key: ContentHeightPreferenceKey.self, value: proxy.size.height)
+            }
+        )
+        .onPreferenceChange(ContentHeightPreferenceKey.self) { height in
+            measuredHeight = height
+        }
+        .background(
+            VisualEffectBackground(material: .popover, blendingMode: .behindWindow)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(
+            DynamicWindowResizer(contentHeight: measuredHeight)
+        )
     }
 }
