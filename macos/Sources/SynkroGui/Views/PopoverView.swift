@@ -91,7 +91,9 @@ public struct PopoverView: View {
             }
         )
         .onPreferenceChange(ContentHeightPreferenceKey.self) { height in
-            measuredHeight = height
+            MainActor.assumeIsolated {
+                measuredHeight = height
+            }
         }
         .background(
             VisualEffectBackground(material: .popover, blendingMode: .behindWindow)
