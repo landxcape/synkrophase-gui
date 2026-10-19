@@ -66,11 +66,11 @@ public struct ControlsView: View {
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color.primary.opacity(0.1))
+                            .fill(.fill.quaternary)
                             .frame(height: 6)
 
                         Capsule()
-                            .fill(Color.primary.opacity(0.7))
+                            .fill(.fill.secondary)
                             .frame(width: geometry.size.width * CGFloat(viewModel.volume / 100.0), height: 6)
                     }
                     .contentShape(Rectangle())

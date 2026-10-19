@@ -9,26 +9,16 @@ public struct TrackCardView: View {
 
     public var body: some View {
         HStack(spacing: 12) {
-            // Liquid Glass Artwork Container
+            // Artwork / Player Icon
             ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.accentColor.opacity(0.18),
-                                Color.accentColor.opacity(0.04)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(.fill.tertiary)
 
                 Image(systemName: "music.note")
                     .font(.title3)
                     .foregroundStyle(.tint)
             }
-            .frame(width: 46, height: 46)
-            .shadow(color: Color.accentColor.opacity(0.12), radius: 6, x: 0, y: 3)
+            .frame(width: 44, height: 44)
 
             // Metadata Titles
             VStack(alignment: .leading, spacing: 2) {
@@ -63,25 +53,7 @@ public struct TrackCardView: View {
             Spacer(minLength: 0)
         }
         .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.thinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        stops: [
-                            .init(color: .white.opacity(0.20), location: 0.0),
-                            .init(color: .clear, location: 0.5),
-                            .init(color: .black.opacity(0.06), location: 1.0)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.5
-                )
-        )
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var formattedDrift: String {

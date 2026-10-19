@@ -13,7 +13,7 @@ public struct PopoverView: View {
                 // Room Header
                 RoomHeaderView(viewModel: viewModel)
 
-                // Now Playing Track Card with layered glass depth
+                // Now Playing Track Card
                 TrackCardView(viewModel: viewModel)
 
                 // Timeline Scrubber
@@ -22,7 +22,8 @@ public struct PopoverView: View {
                 // Transport Controls & Volume
                 ControlsView(viewModel: viewModel)
 
-                softDivider
+                Divider()
+                    .opacity(0.2)
 
                 // Peer List Drawer
                 PeerListView(peers: viewModel.peers)
@@ -31,7 +32,8 @@ public struct PopoverView: View {
                 OfflineView(viewModel: viewModel)
             }
 
-            softDivider
+            Divider()
+                .opacity(0.2)
 
             // Footer Utility Bar
             HStack(spacing: 12) {
@@ -75,32 +77,5 @@ public struct PopoverView: View {
         .padding(14)
         .frame(width: 320)
         .background(.ultraThinMaterial)
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        stops: [
-                            .init(color: .white.opacity(0.35), location: 0.0),
-                            .init(color: .white.opacity(0.06), location: 0.4),
-                            .init(color: .black.opacity(0.10), location: 1.0)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.5
-                )
-        )
-    }
-
-    private var softDivider: some View {
-        Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [.clear, Color.primary.opacity(0.08), .clear],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .frame(height: 1)
     }
 }

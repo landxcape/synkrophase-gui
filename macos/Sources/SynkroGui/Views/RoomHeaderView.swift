@@ -26,21 +26,7 @@ public struct RoomHeaderView: View {
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill(Color.primary.opacity(0.06))
-                )
-                .overlay(
-                    Capsule()
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.18), Color.clear],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 0.5
-                        )
-                )
+                .background(.fill.tertiary, in: Capsule())
             }
             .buttonStyle(.plain)
             .help("Click to copy room code")
@@ -52,9 +38,8 @@ public struct RoomHeaderView: View {
                 .font(.system(size: 9, weight: .bold, design: .rounded))
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)
-                .background(roleBadgeBackground)
+                .background(roleBadgeBackground, in: Capsule())
                 .foregroundStyle(roleBadgeForeground)
-                .clipShape(Capsule())
 
             // Peer Count Pill
             HStack(spacing: 4) {
@@ -67,38 +52,19 @@ public struct RoomHeaderView: View {
             }
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
-            .background(Color.primary.opacity(0.05))
+            .background(.fill.quaternary, in: Capsule())
             .foregroundStyle(.secondary)
-            .clipShape(Capsule())
         }
     }
 
-    private var roleBadgeBackground: some View {
+    private var roleBadgeBackground: Color {
         switch viewModel.role {
         case .leader:
-            return AnyView(
-                LinearGradient(
-                    colors: [Color.green.opacity(0.18), Color.green.opacity(0.08)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
+            return Color.green.opacity(0.15)
         case .moderator:
-            return AnyView(
-                LinearGradient(
-                    colors: [Color.blue.opacity(0.18), Color.blue.opacity(0.08)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
+            return Color.blue.opacity(0.15)
         case .listener:
-            return AnyView(
-                LinearGradient(
-                    colors: [Color.primary.opacity(0.08), Color.primary.opacity(0.04)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
+            return Color.secondary.opacity(0.15)
         }
     }
 

@@ -46,8 +46,7 @@ public struct OfflineView: View {
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(Color.red.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
 
             VStack(spacing: 8) {
@@ -68,11 +67,9 @@ public struct OfflineView: View {
                     .font(.subheadline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(Color.accentColor)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
                 .disabled(viewModel.isStartingDaemon)
 
                 // Secondary: Join Room
@@ -90,11 +87,9 @@ public struct OfflineView: View {
                         .font(.subheadline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
-                        .background(Color.primary.opacity(0.06))
-                        .foregroundStyle(.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
                     .disabled(viewModel.isStartingDaemon)
                 } else {
                     HStack(spacing: 8) {
@@ -104,10 +99,7 @@ public struct OfflineView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(Color.primary.opacity(0.05))
-                            )
+                            .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                             .onChange(of: joinRoomCode) { _, newValue in
                                 joinRoomCode = newValue.uppercased()
                             }
@@ -127,13 +119,9 @@ public struct OfflineView: View {
                                         .fontWeight(.semibold)
                                 }
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.accentColor)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.regular)
                         .disabled(joinRoomCode.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isStartingDaemon)
 
                         Button(action: {
@@ -146,33 +134,13 @@ public struct OfflineView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    .padding(6)
-                    .background(Color.primary.opacity(0.03))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(4)
                 }
             }
             .padding(.top, 2)
         }
         .frame(maxWidth: .infinity)
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.thinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        stops: [
-                            .init(color: .white.opacity(0.20), location: 0.0),
-                            .init(color: .clear, location: 0.5),
-                            .init(color: .black.opacity(0.06), location: 1.0)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.5
-                )
-        )
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

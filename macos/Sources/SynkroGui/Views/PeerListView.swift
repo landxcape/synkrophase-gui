@@ -33,7 +33,7 @@ public struct PeerListView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
-                        .background(Capsule().fill(Color.primary.opacity(0.06)))
+                        .background(Capsule().fill(.fill.quaternary))
                 }
             }
             .buttonStyle(.plain)
@@ -77,7 +77,7 @@ public struct PeerListView: View {
                 .font(.system(size: 9, weight: .semibold))
                 .padding(.horizontal, 5)
                 .padding(.vertical, 1)
-                .background(Capsule().fill(Color.primary.opacity(0.06)))
+                .background(Capsule().fill(.fill.quaternary))
                 .foregroundStyle(.secondary)
 
             Text(formatOffset(peer.clockOffsetUs))

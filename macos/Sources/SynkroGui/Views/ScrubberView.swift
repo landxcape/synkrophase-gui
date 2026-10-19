@@ -24,7 +24,7 @@ public struct ScrubberView: View {
                 ZStack(alignment: .leading) {
                     // Track Background
                     Capsule()
-                        .fill(Color.primary.opacity(0.12))
+                        .fill(.fill.quaternary)
                         .frame(height: 5)
 
                     // Active Progress
