@@ -116,6 +116,31 @@ final class IpcSerializationTests: XCTestCase {
 
         let joinMode = SynkroViewModel.DaemonLaunchMode.join(roomCode: "ROOM12")
         XCTAssertEqual(joinMode.arguments, ["daemon", "start", "join", "ROOM12"])
+
+        let joinWithAddr = SynkroViewModel.DaemonLaunchMode.join(roomCode: "ROOM12", leaderAddr: "192.168.1.50:5871")
+        XCTAssertEqual(joinWithAddr.arguments, ["daemon", "start", "join", "ROOM12", "--leader-addr", "192.168.1.50:5871"])
+    }
+
+    func testJoinCredentialsParsing() {
+        // Plain room code
+        let pure = SynkroViewModel.JoinCredentials.parse("demo123")
+        XCTAssertEqual(pure.roomCode, "DEMO123")
+        XCTAssertNil(pure.leaderAddr)
+
+        // CLI command with leader addr
+        let cli = SynkroViewModel.JoinCredentials.parse("synkro join ALPHA9 --leader-addr 192.168.1.100:5871")
+        XCTAssertEqual(cli.roomCode, "ALPHA9")
+        XCTAssertEqual(cli.leaderAddr, "192.168.1.100:5871")
+
+        // Synkro URL
+        let uri = SynkroViewModel.JoinCredentials.parse("synkro://BETA4/join?leader=100.64.1.2:5871")
+        XCTAssertEqual(uri.roomCode, "BETA4")
+        XCTAssertEqual(uri.leaderAddr, "100.64.1.2:5871")
+
+        // Shorthand room@addr
+        let shorthand = SynkroViewModel.JoinCredentials.parse("gamma8@10.0.0.5:5871")
+        XCTAssertEqual(shorthand.roomCode, "GAMMA8")
+        XCTAssertEqual(shorthand.leaderAddr, "10.0.0.5:5871")
     }
 
     func testDecodeIpcResponseStatus() throws {

@@ -18,15 +18,75 @@ public final class SynkroViewModel {
     public var driftOffsetUs: Int64 = 0
     public var driftStatus: String = "Idle"
     public var peers: [PeerInfo] = []
+    public var leaderAddr: String? = nil
 
     public var isScrubbing: Bool = false
     public var copiedRoomCode: Bool = false
     public var isStartingDaemon: Bool = false
     public var launchErrorMessage: String? = nil
 
+    public struct JoinCredentials: Equatable, Sendable {
+        public let roomCode: String
+        public let leaderAddr: String?
+
+        public init(roomCode: String, leaderAddr: String? = nil) {
+            self.roomCode = roomCode
+            self.leaderAddr = leaderAddr
+        }
+
+        public static func parse(_ rawInput: String) -> JoinCredentials {
+            let trimmed = rawInput.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // 1. Check for CLI command: synkro join <ROOM> [--leader-addr <ADDR>]
+            if trimmed.contains("synkro join") {
+                let parts = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+                var extractedRoom = ""
+                var extractedAddr: String? = nil
+                var i = 0
+                while i < parts.count {
+                    if parts[i] == "join" && i + 1 < parts.count {
+                        extractedRoom = parts[i + 1]
+                        i += 2
+                        continue
+                    }
+                    if parts[i] == "--leader-addr" && i + 1 < parts.count {
+                        extractedAddr = parts[i + 1]
+                        i += 2
+                        continue
+                    }
+                    i += 1
+                }
+                if !extractedRoom.isEmpty {
+                    return JoinCredentials(roomCode: extractedRoom.uppercased(), leaderAddr: extractedAddr)
+                }
+            }
+
+            // 2. Check for URI: synkro://<ROOM>/join?leader=<ADDR>
+            if trimmed.hasPrefix("synkro://") {
+                if let url = URL(string: trimmed), let host = url.host {
+                    let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
+                    let leader = queryItems?.first(where: { $0.name == "leader" })?.value
+                    return JoinCredentials(roomCode: host.uppercased(), leaderAddr: leader)
+                }
+            }
+
+            // 3. Check for shorthand: <ROOM>@<ADDR>
+            if trimmed.contains("@") {
+                let split = trimmed.split(separator: "@", maxSplits: 1).map(String.init)
+                if split.count == 2 {
+                    let room = split[0].trimmingCharacters(in: .whitespaces).uppercased()
+                    let addr = split[1].trimmingCharacters(in: .whitespaces)
+                    return JoinCredentials(roomCode: room, leaderAddr: addr.isEmpty ? nil : addr)
+                }
+            }
+
+            return JoinCredentials(roomCode: trimmed.uppercased(), leaderAddr: nil)
+        }
+    }
+
     public enum DaemonLaunchMode: Sendable, Equatable {
         case host(roomCode: String? = nil)
-        case join(roomCode: String)
+        case join(roomCode: String, leaderAddr: String? = nil)
 
         public var arguments: [String] {
             var args = ["daemon", "start"]
@@ -36,9 +96,13 @@ public final class SynkroViewModel {
                 if let code = roomCode, !code.trimmingCharacters(in: .whitespaces).isEmpty {
                     args.append(code.trimmingCharacters(in: .whitespaces))
                 }
-            case .join(let roomCode):
+            case .join(let roomCode, let leaderAddr):
                 args.append("join")
                 args.append(roomCode.trimmingCharacters(in: .whitespaces))
+                if let addr = leaderAddr, !addr.trimmingCharacters(in: .whitespaces).isEmpty {
+                    args.append("--leader-addr")
+                    args.append(addr.trimmingCharacters(in: .whitespaces))
+                }
             }
             return args
         }
@@ -147,6 +211,7 @@ public final class SynkroViewModel {
                 self.driftOffsetUs = snapshot.driftOffsetUs
                 self.driftStatus = snapshot.driftStatus
                 self.peers = snapshot.peers
+                self.leaderAddr = snapshot.leaderAddr
             }
         } catch {
             // Failed to fetch status
@@ -217,7 +282,14 @@ public final class SynkroViewModel {
     public func copyRoomCode() {
         guard !roomCode.isEmpty else { return }
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(roomCode, forType: .string)
+
+        let copyString: String
+        if let addr = leaderAddr, !addr.isEmpty {
+            copyString = "synkro join \(roomCode) --leader-addr \(addr)"
+        } else {
+            copyString = "synkro join \(roomCode)"
+        }
+        NSPasteboard.general.setString(copyString, forType: .string)
 
         copiedRoomCode = true
         Task {
@@ -255,10 +327,10 @@ public final class SynkroViewModel {
             return
         }
 
-        // Start 4.0s watchdog to prevent "stuck on starting"
+        // Start 7.0s watchdog to prevent "stuck on starting"
         launchWatchdogTask?.cancel()
         launchWatchdogTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            try? await Task.sleep(nanoseconds: 7_000_000_000)
             guard let self = self, !Task.isCancelled else { return }
             if self.isStartingDaemon && self.connectionState != .connected {
                 self.isStartingDaemon = false

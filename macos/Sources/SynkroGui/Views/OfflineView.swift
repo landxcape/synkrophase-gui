@@ -3,6 +3,7 @@ import SwiftUI
 public struct OfflineView: View {
     public let viewModel: SynkroViewModel
     @State private var joinRoomCode: String = ""
+    @State private var joinLeaderAddr: String = ""
     @State private var showJoinSection: Bool = false
 
     public init(viewModel: SynkroViewModel) {
@@ -92,47 +93,69 @@ public struct OfflineView: View {
                     .controlSize(.regular)
                     .disabled(viewModel.isStartingDaemon)
                 } else {
-                    HStack(spacing: 8) {
-                        TextField("ROOM CODE", text: $joinRoomCode)
+                    VStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            TextField("ROOM CODE", text: $joinRoomCode)
+                                .textFieldStyle(.plain)
+                                .font(.system(.subheadline, design: .monospaced))
+                                .multilineTextAlignment(.leading)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .onChange(of: joinRoomCode) { _, newValue in
+                                    handleRoomInput(newValue)
+                                }
+
+                            Button(action: {
+                                withAnimation(.snappy(duration: 0.2)) {
+                                    showJoinSection = false
+                                }
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Cancel")
+                        }
+
+                        TextField("LEADER IP:PORT (OPTIONAL)", text: $joinLeaderAddr)
                             .textFieldStyle(.plain)
-                            .font(.system(.subheadline, design: .monospaced))
-                            .multilineTextAlignment(.center)
+                            .font(.system(.caption, design: .monospaced))
+                            .multilineTextAlignment(.leading)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            .onChange(of: joinRoomCode) { _, newValue in
-                                joinRoomCode = newValue.uppercased()
+                            .onChange(of: joinLeaderAddr) { _, newValue in
+                                if newValue.contains("synkro join") || newValue.contains("synkro://") {
+                                    handleRoomInput(newValue)
+                                }
                             }
-                            .frame(maxWidth: .infinity)
 
                         Button(action: {
                             let cleanCode = joinRoomCode.trimmingCharacters(in: .whitespaces)
+                            let cleanAddr = joinLeaderAddr.trimmingCharacters(in: .whitespaces)
                             guard !cleanCode.isEmpty else { return }
-                            viewModel.launchDaemon(mode: .join(roomCode: cleanCode))
+                            viewModel.launchDaemon(mode: .join(
+                                roomCode: cleanCode,
+                                leaderAddr: cleanAddr.isEmpty ? nil : cleanAddr
+                            ))
                         }) {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 6) {
                                 if viewModel.isStartingDaemon {
                                     ProgressView()
                                         .controlSize(.small)
                                 } else {
-                                    Text("Join")
-                                        .fontWeight(.semibold)
+                                    Image(systemName: "arrow.right.circle.fill")
                                 }
+                                Text(viewModel.isStartingDaemon ? "Joining..." : "Join Room")
+                                    .fontWeight(.semibold)
                             }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
                         }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.regular)
                         .disabled(joinRoomCode.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isStartingDaemon)
-
-                        Button(action: {
-                            withAnimation(.snappy(duration: 0.2)) {
-                                showJoinSection = false
-                            }
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
                     }
                     .padding(4)
                 }
@@ -142,5 +165,17 @@ public struct OfflineView: View {
         .frame(maxWidth: .infinity)
         .padding(14)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private func handleRoomInput(_ input: String) {
+        if input.contains("synkro join") || input.contains("synkro://") || input.contains("@") {
+            let parsed = SynkroViewModel.JoinCredentials.parse(input)
+            joinRoomCode = parsed.roomCode
+            if let addr = parsed.leaderAddr {
+                joinLeaderAddr = addr
+            }
+        } else {
+            joinRoomCode = input.uppercased()
+        }
     }
 }

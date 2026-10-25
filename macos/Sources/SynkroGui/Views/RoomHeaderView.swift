@@ -29,7 +29,7 @@ public struct RoomHeaderView: View {
                 .background(.fill.tertiary, in: Capsule())
             }
             .buttonStyle(.plain)
-            .help("Click to copy room code")
+            .help("Click to copy invite command (with leader address)")
 
             Spacer()
 
