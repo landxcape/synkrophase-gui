@@ -76,7 +76,7 @@ public struct AboutView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text("synkro v0.8.2")
+                    Text("synkro v0.8.3")
                         .font(.caption.monospaced())
                         .foregroundStyle(.primary)
                 }

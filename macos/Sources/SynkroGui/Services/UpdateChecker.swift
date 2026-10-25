@@ -41,7 +41,7 @@ public final class UpdateChecker {
             self.currentVersion = current
         } else {
             let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] as? String
-            self.currentVersion = bundleVersion ?? "0.1.2"
+            self.currentVersion = bundleVersion ?? "0.1.3"
         }
     }
 

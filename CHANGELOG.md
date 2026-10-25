@@ -3,6 +3,18 @@
 All notable changes to Synkrophase GUI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-10-25
+
+### Added
+- **Direct & Optional Leader Address Entry (`OfflineView.swift`)**:
+  - Added dedicated, monospaced `LEADER IP:PORT (OPTIONAL)` input field to the Join drawer for direct connection when mDNS multicast is filtered by network routers.
+- **Smart Invite Parser (`SynkroViewModel.JoinCredentials`)**:
+  - Automatically parses pasted CLI join commands (`synkro join ROOM --leader-addr IP:PORT`), Synkro URIs (`synkro://ROOM/join?leader=IP:PORT`), and shorthand (`ROOM@IP:PORT`) into room code and leader address fields.
+- **Copy Complete Invite Command (`RoomHeaderView.swift`, `SynkroViewModel.swift`)**:
+  - Clicking the Room Code pill now copies the canonical join command including `--leader-addr` when available (e.g. `synkro join ROOM --leader-addr IP:PORT`).
+- **Resilient Watchdog**:
+  - Extended daemon launch watchdog timeout to 7.0 seconds to accommodate slower Wi-Fi networks and multi-homed interface discovery.
+
 ## [0.1.2] - 2026-10-19
 
 ### Added
