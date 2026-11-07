@@ -24,6 +24,9 @@ public final class SynkroViewModel {
     public var copiedRoomCode: Bool = false
     public var isStartingDaemon: Bool = false
     public var launchErrorMessage: String? = nil
+    public var isRunningDoctor: Bool = false
+    public var doctorReport: DoctorReport? = nil
+    public var autoRepairMessage: String? = nil
 
     public struct JoinCredentials: Equatable, Sendable {
         public let roomCode: String
@@ -139,6 +142,7 @@ public final class SynkroViewModel {
         if state == .connected {
             self.isStartingDaemon = false
             self.launchErrorMessage = nil
+            self.autoRepairMessage = nil
             self.launchWatchdogTask?.cancel()
             self.launchWatchdogTask = nil
             Task {
@@ -298,23 +302,28 @@ public final class SynkroViewModel {
         }
     }
 
-    public func launchDaemon(mode: DaemonLaunchMode = .host(roomCode: nil)) {
+    public func launchDaemon(mode: DaemonLaunchMode = .host(roomCode: nil), isAutoRetry: Bool = false) {
         self.isStartingDaemon = true
         self.launchErrorMessage = nil
-        let synkroBin = findSynkroBinary()
+        if !isAutoRetry {
+            self.autoRepairMessage = nil
+        }
 
+        let synkroBin = findSynkroBinary()
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: synkroBin)
-        process.arguments = mode.arguments
+        if synkroBin == "synkro" {
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = ["synkro"] + mode.arguments
+        } else {
+            process.executableURL = URL(fileURLWithPath: synkroBin)
+            process.arguments = mode.arguments
+        }
 
         process.terminationHandler = { [weak self] proc in
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 if proc.terminationStatus != 0 {
-                    self.isStartingDaemon = false
-                    self.launchErrorMessage = "Daemon exited with status \(proc.terminationStatus)"
-                    self.launchWatchdogTask?.cancel()
-                    self.launchWatchdogTask = nil
+                    self.handleLaunchFailure(mode: mode, exitCode: proc.terminationStatus, isAutoRetry: isAutoRetry)
                 }
             }
         }
@@ -333,29 +342,150 @@ public final class SynkroViewModel {
             try? await Task.sleep(nanoseconds: 7_000_000_000)
             guard let self = self, !Task.isCancelled else { return }
             if self.isStartingDaemon && self.connectionState != .connected {
-                self.isStartingDaemon = false
-                self.launchErrorMessage = "Launch timed out. Run 'synkro doctor' to diagnose."
+                self.handleLaunchTimeout(mode: mode, isAutoRetry: isAutoRetry)
             }
         }
+    }
+
+    private func handleLaunchFailure(mode: DaemonLaunchMode, exitCode: Int32, isAutoRetry: Bool) {
+        self.launchWatchdogTask?.cancel()
+        self.launchWatchdogTask = nil
+
+        if !isAutoRetry {
+            self.autoRepairMessage = "Daemon exited (\(exitCode)). Running auto-repair..."
+            Task {
+                let report = await self.runDoctor(fix: true)
+                if let report = report, !report.repairsApplied.isEmpty {
+                    self.autoRepairMessage = "Repaired: \(report.repairsApplied.joined(separator: ", ")). Retrying launch..."
+                    try? await Task.sleep(nanoseconds: 800_000_000)
+                    self.autoRepairMessage = nil
+                    self.launchDaemon(mode: mode, isAutoRetry: true)
+                    return
+                }
+
+                self.isStartingDaemon = false
+                self.autoRepairMessage = nil
+                let remediation = self.doctorReport?.firstRemediation
+                self.launchErrorMessage = remediation ?? "Daemon exited with status \(exitCode). Run diagnostics below."
+            }
+        } else {
+            self.isStartingDaemon = false
+            self.autoRepairMessage = nil
+            let remediation = self.doctorReport?.firstRemediation
+            self.launchErrorMessage = remediation ?? "Daemon failed to start after auto-repair. Status \(exitCode)."
+        }
+    }
+
+    private func handleLaunchTimeout(mode: DaemonLaunchMode, isAutoRetry: Bool) {
+        if !isAutoRetry {
+            self.autoRepairMessage = "Launch timed out. Running auto-repair..."
+            Task {
+                let report = await self.runDoctor(fix: true)
+                if let report = report, !report.repairsApplied.isEmpty {
+                    self.autoRepairMessage = "Repaired: \(report.repairsApplied.joined(separator: ", ")). Retrying launch..."
+                    try? await Task.sleep(nanoseconds: 800_000_000)
+                    self.autoRepairMessage = nil
+                    self.launchDaemon(mode: mode, isAutoRetry: true)
+                    return
+                }
+
+                self.isStartingDaemon = false
+                self.autoRepairMessage = nil
+                let remediation = self.doctorReport?.firstRemediation
+                self.launchErrorMessage = remediation ?? "Launch timed out. Run diagnostics below."
+            }
+        } else {
+            self.isStartingDaemon = false
+            self.autoRepairMessage = nil
+            let remediation = self.doctorReport?.firstRemediation
+            self.launchErrorMessage = remediation ?? "Launch timed out after auto-repair. Check diagnostics."
+        }
+    }
+
+    @discardableResult
+    public func runDoctor(fix: Bool = true) async -> DoctorReport? {
+        self.isRunningDoctor = true
+        defer { self.isRunningDoctor = false }
+
+        var args = ["doctor", "--json"]
+        if fix {
+            args.insert("--fix", at: 1)
+        }
+
+        let result = await executeSynkro(arguments: args)
+        guard let data = result.stdout.data(using: .utf8) else {
+            return nil
+        }
+
+        do {
+            let report = try JSONDecoder().decode(DoctorReport.self, from: data)
+            self.doctorReport = report
+            return report
+        } catch {
+            return nil
+        }
+    }
+
+    public func clearDoctorReport() {
+        self.doctorReport = nil
     }
 
     public func stopDaemon() {
         Task {
             _ = try? await ipcClient.sendRequest(method: "stop")
-            let synkroBin = findSynkroBinary()
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: synkroBin)
-            process.arguments = ["daemon", "stop"]
-            try? process.run()
+            _ = await executeSynkro(arguments: ["daemon", "stop"])
         }
     }
 
-    private func findSynkroBinary() -> String {
-        let candidates = [
+    private func executeSynkro(arguments: [String]) async -> (status: Int32, stdout: String, stderr: String) {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                let process = Process()
+                let stdoutPipe = Pipe()
+                let stderrPipe = Pipe()
+
+                let binary = self.findSynkroBinary()
+                if binary == "synkro" {
+                    process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+                    process.arguments = ["synkro"] + arguments
+                } else {
+                    process.executableURL = URL(fileURLWithPath: binary)
+                    process.arguments = arguments
+                }
+
+                process.standardOutput = stdoutPipe
+                process.standardError = stderrPipe
+
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                    let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                    let stdoutStr = String(data: stdoutData, encoding: .utf8) ?? ""
+                    let stderrStr = String(data: stderrData, encoding: .utf8) ?? ""
+                    continuation.resume(returning: (process.terminationStatus, stdoutStr, stderrStr))
+                } catch {
+                    continuation.resume(returning: (-1, "", error.localizedDescription))
+                }
+            }
+        }
+    }
+
+    nonisolated private func findSynkroBinary() -> String {
+        var candidates = [
             "/opt/homebrew/bin/synkro",
             "/usr/local/bin/synkro",
             FileManager.default.homeDirectoryForCurrentUser.path + "/.cargo/bin/synkro"
         ]
+
+        let currentDir = FileManager.default.currentDirectoryPath
+        candidates.append(contentsOf: [
+            currentDir + "/synkrophase/target/release/synkro",
+            currentDir + "/synkrophase/target/debug/synkro",
+            currentDir + "/../synkrophase/target/release/synkro",
+            currentDir + "/../synkrophase/target/debug/synkro"
+        ])
+
         for candidate in candidates {
             if FileManager.default.isExecutableFile(atPath: candidate) {
                 return candidate

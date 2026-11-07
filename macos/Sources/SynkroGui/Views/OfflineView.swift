@@ -34,6 +34,21 @@ public struct OfflineView: View {
                     .multilineTextAlignment(.center)
             }
 
+            if let repairMsg = viewModel.autoRepairMessage {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+
+                    Text(repairMsg)
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .lineLimit(2)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+
             if let errorMsg = viewModel.launchErrorMessage {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -161,10 +176,106 @@ public struct OfflineView: View {
                 }
             }
             .padding(.top, 2)
+
+            // Diagnostics & Auto-Repair
+            VStack(spacing: 6) {
+                Button(action: {
+                    Task {
+                        await viewModel.runDoctor(fix: true)
+                    }
+                }) {
+                    HStack(spacing: 6) {
+                        if viewModel.isRunningDoctor {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "wrench.and.screwdriver")
+                        }
+                        Text(viewModel.isRunningDoctor ? "Diagnosing & Repairing..." : "Run Diagnostics & Repair")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.isRunningDoctor || viewModel.isStartingDaemon)
+
+                if let report = viewModel.doctorReport {
+                    doctorReportCard(report)
+                }
+            }
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
         .padding(14)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func doctorReportCard(_ report: DoctorReport) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(report.hasFailures ? Color.red : (report.hasWarnings ? Color.orange : Color.green))
+                        .frame(width: 8, height: 8)
+                    Text(report.hasFailures ? "Issues Detected" : (report.hasWarnings ? "Ready with Warnings" : "System Healthy"))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                }
+
+                Spacer()
+
+                Button(action: {
+                    viewModel.clearDoctorReport()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if !report.repairsApplied.isEmpty {
+                ForEach(report.repairsApplied, id: \.self) { repair in
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.green)
+                        Text(repair)
+                            .font(.caption2)
+                            .foregroundStyle(.primary)
+                    }
+                }
+            }
+
+            ForEach(report.checks.filter { $0.status != .passed }) { check in
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Image(systemName: check.status == .failed ? "xmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(check.status == .failed ? Color.red : Color.orange)
+                        Text(check.name)
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                    }
+                    Text(check.message)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    if let remediation = check.remediation {
+                        Text("Fix: \(remediation)")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(10)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     private func handleRoomInput(_ input: String) {
