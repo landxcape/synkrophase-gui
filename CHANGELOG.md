@@ -3,6 +3,17 @@
 All notable changes to Synkrophase GUI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-11-07
+
+### Added
+- **Automated Self-Repair & Diagnostics (`DoctorModels.swift`, `SynkroViewModel.swift`)**:
+  - Automatically runs `synkro doctor --fix --json` on daemon launch timeouts (7.0s) or non-zero exit codes.
+  - Automatically unlinks stale domain sockets (`synkro.sock`) or dead PID locks and performs a seamless launch retry.
+  - Added dedicated Swift models (`DoctorReport`, `DoctorCheck`, `DoctorCheckStatus`) decoding CLI doctor outputs.
+- **Interactive In-App Doctor Inspection (`OfflineView.swift`)**:
+  - Added visible `"Run Diagnostics & Repair"` button in the Offline view with progress indicators.
+  - Diagnostic disclosure card reporting check categories, applied auto-repairs, and actionable remediation text (e.g. macOS Automation permissions).
+
 ## [0.1.3] - 2026-10-25
 
 ### Added
